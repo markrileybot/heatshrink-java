@@ -50,7 +50,7 @@ public class HsInputStream extends FilterInputStream {
 	 */
 	private int inputBufferPos;
 	private int inputBufferLen;
-	private boolean inputBufferEmpty;
+	private boolean inputExhausted;
 
 	/**
 	 * Current byte bit reader bounds
@@ -203,7 +203,7 @@ public class HsInputStream extends FilterInputStream {
 		}
 
 		int numRead = rr.off - off;
-		return numRead > 0 ? numRead : inputBufferEmpty ? -1 : 0;
+		return numRead > 0 ? numRead : inputExhausted ? -1 : 0;
 	}
 
 	private State readTagBit() throws IOException {
@@ -385,7 +385,7 @@ public class HsInputStream extends FilterInputStream {
 		outputCount = outputIndex = 0;
 		inputBufferPos = inputBufferLen = 0;
 		currentBytePos = 0;
-		inputBufferEmpty = false;
+		inputExhausted = false;
 	}
 
 	private boolean ensureAvailable(int bitsRequired) throws IOException {
@@ -404,7 +404,7 @@ public class HsInputStream extends FilterInputStream {
 			if(numRead > -1) {
 				inputBufferLen += numRead;
 			} else {
-				inputBufferEmpty = true;
+				inputExhausted = true;
 			}
 			bitsAvailable = inputBufferLen * 8;
 		}
