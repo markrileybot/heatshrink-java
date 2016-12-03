@@ -1,18 +1,28 @@
-apply plugin: 'java'
-apply plugin: 'maven'
-apply plugin: 'jacoco'
-
-group = 'com.github.markrileybot.heatshrink'
-version = '1.0.0-SNAPSHOT'
+plugins {
+	id "java"
+	id "jacoco"
+	id 'com.github.kt3k.coveralls' version '2.6.3'
+}
 
 repositories {
 	mavenLocal()
-    jcenter()
+	mavenCentral()
+	jcenter()
 }
+
+group = 'com.github.markrileybot.heatshrink'
+version = '1.0.0-SNAPSHOT'
 
 dependencies {
     compile 'org.slf4j:slf4j-api:1.7.21'
     testCompile 'junit:junit:4.12'
     testCompile 'commons-io:commons-io:2.5'
     testCompile files(sourceSets.test.resources.srcDirs)
+}
+
+jacocoTestReport {
+	reports {
+		xml.enabled = true // coveralls plugin depends on xml format report
+		html.enabled = true
+	}
 }
