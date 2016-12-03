@@ -10,6 +10,8 @@ import java.io.InputStream;
  */
 public class HsInputStream extends FilterInputStream {
 
+	private static final double LN2 = Math.log(2);
+
 	/**
 	 * State machine states.  Don't really need this but it's nice
 	 * to match the c code.
@@ -232,19 +234,16 @@ public class HsInputStream extends FilterInputStream {
 	}
 
 	private State readBackref(ReadResult rr) {
-		int count = rr.end - rr.off;
+		int count = Math.min(rr.end - rr.off, outputCount);
 		if(count > 0) {
-			if(outputCount < count) {
-				count = outputCount;
-			}
 			int mask = (1 << windowSize) - 1;
-			for(int i = 0; i < count; i++) {
+			for (int i = 0; i < count; i++) {
 				byte c = window[(windowPos - outputIndex) & mask];
 				rr.b[rr.off++] = c;
 				window[windowPos++ & mask] = c;
 			}
 			outputCount -= count;
-			if(outputCount == 0) {
+			if (outputCount == 0) {
 				return State.TAG_BIT;
 			}
 		}
@@ -333,6 +332,7 @@ public class HsInputStream extends FilterInputStream {
 	 * @see     java.io.FilterInputStream#reset()
 	 */
 	public void mark(int readlimit) {
+		throw new UnsupportedOperationException();
 	}
 
 	/**
@@ -357,6 +357,7 @@ public class HsInputStream extends FilterInputStream {
 	 * @see        java.io.FilterInputStream#mark(int)
 	 */
 	public void reset() throws IOException {
+		throw new UnsupportedOperationException();
 	}
 
 	/**
@@ -392,7 +393,7 @@ public class HsInputStream extends FilterInputStream {
 		int bytesRemaining = inputBufferLen - inputBufferPos;
 		int bitsAvailable = bytesRemaining * 8;
 
-		bitsRequired -= (currentBytePos > 0 ? 8 - (currentBytePos >> 3) : 0);
+		bitsRequired -= (currentBytePos > 0 ? 8 - ((Math.log(currentBytePos) / LN2) + 1) : 0);
 		if(bitsRequired > bitsAvailable) {
 			if(bytesRemaining > 0) {
 				// lame buffer shift won't happen often
@@ -419,12 +420,6 @@ public class HsInputStream extends FilterInputStream {
 		}
 		for(; numBits > 0; numBits--, currentBytePos >>= 1) {
 			if(currentBytePos == 0) {
-				if(!ensureAvailable(numBits)) {
-					if(ret == 0) {
-						return -1;
-					}
-					throw new EOFException();
-				}
 				currentByte = inputBuffer[inputBufferPos++];
 				currentBytePos = 0x80;
 			}
@@ -442,7 +437,6 @@ public class HsInputStream extends FilterInputStream {
 
 		return ret;
 	}
-
 
 	private static final class ReadResult {
 		int off;
