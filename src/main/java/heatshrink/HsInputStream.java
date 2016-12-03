@@ -425,7 +425,7 @@ public class HsInputStream extends FilterInputStream {
 					}
 					throw new EOFException();
 				}
-				currentByte = inputBuffer[inputBufferPos++] & 0xff;
+				currentByte = inputBuffer[inputBufferPos++];
 				currentBytePos = 0x80;
 			}
 
