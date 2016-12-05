@@ -379,16 +379,6 @@ public class HsInputStream extends FilterInputStream {
 
 	/**
 	 * Prepare this for reuse
-	 *
-	 * @param in A new input stream
-	 */
-	public void clear(InputStream in) {
-		this.in = in;
-		clear();
-	}
-
-	/**
-	 * Prepare this for reuse
 	 */
 	private void clear() {
 		state = State.TAG_BIT;
