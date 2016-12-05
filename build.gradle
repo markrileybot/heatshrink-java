@@ -16,10 +16,10 @@ group = 'com.github.markrileybot.heatshrink'
 version = '0.0.2-SNAPSHOT'
 
 dependencies {
-    compile 'org.slf4j:slf4j-api:1.7.21'
-    testCompile 'junit:junit:4.12'
-    testCompile 'commons-io:commons-io:2.5'
-    testCompile files(sourceSets.test.resources.srcDirs)
+	compile 'org.slf4j:slf4j-api:1.7.21'
+	testCompile 'junit:junit:4.12'
+	testCompile 'commons-io:commons-io:2.5'
+	testCompile files(sourceSets.test.resources.srcDirs)
 }
 
 jacocoTestReport {
@@ -29,18 +29,34 @@ jacocoTestReport {
 	}
 }
 
+task sourceJar(type: Jar) {
+	from sourceSets.main.allJava
+}
+
+task javadocJar(type: Jar, dependsOn: 'javadoc') {
+	from javadoc.destinationDir
+}
+
 publishing {
-    publications {
-        MyPublication(MavenPublication) {
-            from components.java
-        }
-    }
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+
+			artifact sourceJar {
+				classifier 'sources'
+			}
+
+			artifact javadocJar {
+				classifier 'javadoc'
+			}
+		}
+	}
 }
 
 bintray {
-    user = 'markrileybot'
+	user = 'markrileybot'
 	key = System.getenv('BINTRAY_KEY')
-	publications = ['MyPublication']
+	publications = ['mavenJava']
 	pkg {
 		repo = 'markrileybot'
 		name = project.name

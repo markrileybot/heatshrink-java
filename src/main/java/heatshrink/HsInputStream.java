@@ -101,7 +101,7 @@ public class HsInputStream extends FilterInputStream {
 		this.window = new byte[1 << windowSize];
 		this.windowSize = windowSize;
 		this.lookaheadSize = lookaheadSize;
-		clear(in);
+		clear();
 	}
 
 	/**
@@ -379,9 +379,18 @@ public class HsInputStream extends FilterInputStream {
 
 	/**
 	 * Prepare this for reuse
+	 *
+	 * @param in A new input stream
 	 */
 	public void clear(InputStream in) {
 		this.in = in;
+		clear();
+	}
+
+	/**
+	 * Prepare this for reuse
+	 */
+	private void clear() {
 		state = State.TAG_BIT;
 		outputCount = outputIndex = 0;
 		inputBufferPos = inputBufferLen = 0;
