@@ -16,7 +16,6 @@ group = 'com.github.markrileybot.heatshrink'
 version = '0.0.3-SNAPSHOT'
 
 dependencies {
-	compile 'org.slf4j:slf4j-api:1.7.21'
 	testCompile 'junit:junit:4.12'
 	testCompile 'commons-io:commons-io:2.5'
 	testCompile files(sourceSets.test.resources.srcDirs)
