@@ -1,7 +1,9 @@
 plugins {
 	id "java"
 	id "jacoco"
+	id 'maven-publish'
 	id 'com.github.kt3k.coveralls' version '2.6.3'
+	id "com.jfrog.bintray" version "1.7"
 }
 
 repositories {
@@ -11,7 +13,7 @@ repositories {
 }
 
 group = 'com.github.markrileybot.heatshrink'
-version = '1.0.0-SNAPSHOT'
+version = '0.0.1'
 
 dependencies {
     compile 'org.slf4j:slf4j-api:1.7.21'
@@ -26,3 +28,23 @@ jacocoTestReport {
 		html.enabled = true
 	}
 }
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+bintray {
+    user = 'markrileybot'
+	key = System.getenv('BINTRAY_KEY')
+	publications = ['MyPublication']
+	pkg {
+		repo = 'markrileybot'
+		name = project.name
+		userOrg = 'mrileybot'
+	}
+}
+
