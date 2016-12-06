@@ -15,11 +15,11 @@ build.gradle:
 ```groovy
 
 repositories {
-	maven { url 'https://dl.bintray.com/mrileybot/markrileybot/' }
+	jcenter()
 }
     
 dependencies {
-	compile 'com.github.markrileybot.heatshrink:heatshrink-java:0.0.1'
+	compile 'com.github.markrileybot.heatshrink:heatshrink-java:0.0.3'
 }
 
 ```
