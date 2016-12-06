@@ -3,10 +3,12 @@ package heatshrink;
 import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
+ * InputStream used to decode heatshrink'd data.
  *
+ * @see <a href="https://github.com/atomicobject/heatshrink">heatshrink on github</a>
+ * @see <a href="https://github.com/markrileybot/heatshrink-java">heatshrink-java on github</a>
  */
 public class HsInputStream extends FilterInputStream {
 
@@ -19,8 +21,7 @@ public class HsInputStream extends FilterInputStream {
 	enum State {
 		TAG_BIT,                /* tag bit */
 		YIELD_LITERAL,          /* ready to yield literal byte */
-		BACKREF_INDEX,          /* ready to yield backref index */
-		BACKREF_COUNT,          /* ready to yield backref count */
+		BACKREF_BOUNDS,          /* ready to yield backref index/count */
 		YIELD_BACKREF,          /* ready to yield back-reference */
 		BUFFER_EMPTY,           /* Not enough data to continue */
 	}
@@ -185,11 +186,8 @@ public class HsInputStream extends FilterInputStream {
 				case YIELD_LITERAL:
 					state = readLiteral(rr);
 					break;
-				case BACKREF_INDEX:
-					state = readBackrefIndex();
-					break;
-				case BACKREF_COUNT:
-					state = readBackrefCount();
+				case BACKREF_BOUNDS:
+					state = readBackrefBounds();
 					break;
 				case YIELD_BACKREF:
 					state = readBackref(rr);
@@ -216,20 +214,26 @@ public class HsInputStream extends FilterInputStream {
 			return State.YIELD_LITERAL;
 		}
 		outputCount = outputIndex = 0;
-		return State.BACKREF_INDEX;
+		return State.BACKREF_BOUNDS;
 	}
 
-	private State readBackrefIndex() throws IOException {
+	private State readBackrefBounds() throws IOException {
 		int bits = getBits(windowSize);
 		if(bits == -1) return State.BUFFER_EMPTY;
 		outputIndex = bits + 1;
-		return State.BACKREF_COUNT;
-	}
 
-	private State readBackrefCount() throws IOException {
-		int bits = getBits(lookaheadSize);
+		bits = getBits(lookaheadSize);
 		if(bits == -1) return State.BUFFER_EMPTY;
 		outputCount = bits + 1;
+
+		System.err.println("BR: o=" + outputIndex + ", l=" + outputCount + ", cwp=" + windowPos);
+		int mask = (1 << windowSize) - 1;
+		for(int i = 0; i < outputCount; i++) {
+			if(i > 0) System.err.print(", ");
+			char c = (char) window[((windowPos + i) - outputIndex) & mask];
+			System.err.print(c);
+		}
+		System.err.println();
 		return State.YIELD_BACKREF;
 	}
 
@@ -385,6 +389,7 @@ public class HsInputStream extends FilterInputStream {
 		outputCount = outputIndex = 0;
 		inputBufferPos = inputBufferLen = 0;
 		currentBytePos = 0;
+		windowPos = 0;
 		inputExhausted = false;
 	}
 
