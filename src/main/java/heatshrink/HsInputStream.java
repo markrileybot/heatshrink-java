@@ -380,7 +380,7 @@ public class HsInputStream extends FilterInputStream {
 	/**
 	 * Prepare this for reuse
 	 */
-	private void clear() {
+	public void clear() {
 		state = State.TAG_BIT;
 		outputCount = outputIndex = 0;
 		inputBufferPos = inputBufferLen = 0;
