@@ -7,6 +7,8 @@ import java.util.Arrays;
  */
 public class Window {
 
+	private final int windowBits;
+	private final int lookaheadBits;
 	private final int windowSize;
 	private final int lookaheadSize;
 
@@ -14,36 +16,58 @@ public class Window {
 
 	private final int mask;
 	private final byte[] buffer;
+	private final int breakEven;
 	private int pos;
 
-	public Window(int windowSize, int lookaheadSize) {
-		this.windowSize = windowSize;
-		this.lookaheadSize = lookaheadSize;
-		this.buffer = new byte[1 << windowSize];
-		this.mask = (1 << windowSize) - 1;
+	public Window(int windowBits, int lookaheadBits) {
+		this.windowBits = windowBits;
+		this.lookaheadBits = lookaheadBits;
+		this.windowSize = 1 << windowBits;
+		this.lookaheadSize = 1 << lookaheadBits;
+		this.breakEven = (1 + windowBits + lookaheadBits) / 8;
+
+		this.buffer = new byte[2 << windowBits];
+		this.mask = windowSize - 1;
 		this.search = new int[256];
 		Arrays.fill(buffer, (byte) 0xff);
 		Arrays.fill(search, (byte) 0xff);
 	}
 
-	public int getWindowSize() {
-		return windowSize;
+	public int getWindowBits() {
+		return windowBits;
 	}
 
-	public int getLookaheadSize() {
-		return lookaheadSize;
+	public int getLookaheadBits() {
+		return lookaheadBits;
 	}
 
-	public void push(byte b) {
+	public void add(byte b) {
 		int index = pos++ & mask;
-		byte old = buffer[index];
 		buffer[index] = b;
-		search[old & 0xff] = -1;
-		search[b   & 0xff] = index;
+		search[b & 0xff] = index;
 	}
 
 	public int get(byte b) {
-		return search[b];
+		return search[b & 0xff];
+	}
+
+	public boolean fill(byte[] b, int off, int len) {
+		int fillLen = Math.min(len, windowBits - pos);
+		System.arraycopy(b, off, buffer, windowBits, fillLen);
+		return (pos += fillLen) == windowBits;
+	}
+
+	public void write() {
+
+	}
+
+	public int findBestMatch(int start, int end) {
+		int bestMatch = 0;
+
+
+		for(int i = end - 1; i >= start; i--) {
+
+		}
 	}
 
 	@Override

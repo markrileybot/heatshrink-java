@@ -226,14 +226,6 @@ public class HsInputStream extends FilterInputStream {
 		if(bits == -1) return State.BUFFER_EMPTY;
 		outputCount = bits + 1;
 
-		System.err.println("BR: o=" + outputIndex + ", l=" + outputCount + ", cwp=" + windowPos);
-		int mask = (1 << windowSize) - 1;
-		for(int i = 0; i < outputCount; i++) {
-			if(i > 0) System.err.print(", ");
-			char c = (char) window[((windowPos + i) - outputIndex) & mask];
-			System.err.print(c);
-		}
-		System.err.println();
 		return State.YIELD_BACKREF;
 	}
 

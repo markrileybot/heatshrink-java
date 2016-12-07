@@ -14,6 +14,8 @@ import java.util.Map;
  */
 public class HsOutputStream extends FilterOutputStream {
 
+	private final int windowSize;
+	private final int lookaheadSize;
 	private int currentByte;
 	private int currentBytePos = 0x80;
 
@@ -30,15 +32,12 @@ public class HsOutputStream extends FilterOutputStream {
 		DONE,                  /* done */
 	}
 
-	private final byte[] outputBuffer;
-	private int outputBufferPos;
-
 	private final byte[] window;
-	private int windowPos;
-	private final int windowSize;
-	private final int lookaheadSize;
 
-	private final short[] searchIndex;
+	private int windowPos;
+
+	private final int windowBits;
+	private final int lookaheadBits;
 
 	private byte[] tmp = new byte[1];
 	private final WriteResult wr = new WriteResult();
@@ -56,11 +55,11 @@ public class HsOutputStream extends FilterOutputStream {
 	 */
 	public HsOutputStream(OutputStream out, int windowSize, int lookaheadSize) {
 		super(out);
-		this.outputBuffer = new byte[2 << windowSize];
-		this.window = new byte[1 << windowSize];
-		this.searchIndex = new short[2 << windowSize];
-		this.windowSize = windowSize;
-		this.lookaheadSize = lookaheadSize;
+		this.window = new byte[2 << windowSize];
+		this.windowBits = windowSize;
+		this.lookaheadBits = lookaheadSize;
+		this.windowSize = 1 << windowBits;
+		this.lookaheadSize = 1 << lookaheadBits;
 	}
 
 	@Override
@@ -99,48 +98,58 @@ public class HsOutputStream extends FilterOutputStream {
 	}
 
 	private boolean fillOutputBuffer(WriteResult wr) {
-		int rem = outputBuffer.length - outputBufferPos;
+		int rem = windowSize - windowPos;
 		if(rem > 0) {
 			rem = Math.min(rem, wr.len);
-			System.arraycopy(wr.b, wr.off, outputBuffer, outputBufferPos, rem);
+			System.arraycopy(wr.b, wr.off, window, windowPos + windowSize, rem);
 			wr.off += rem;
-			outputBufferPos += rem;
+			windowPos += rem;
 		}
-		return outputBufferPos == outputBuffer.length;
+		return windowPos == windowSize;
 	}
 
 	private State flushOutputBuffer() throws IOException {
-		if(outputBufferPos > 0) {
-			Map<Byte, Integer> searchIndex = new HashMap<>();
-			int matchStartIndex = -1;
-			int matchLength = 0;
-			int windowBits = 1 << windowSize;
-			int lookaheadBits = 1 << lookaheadSize;
+		if(windowPos > 0) {
 			int breakEven = (1 + windowBits + lookaheadBits) / 8;
+			int scanPos = 0;
 
-			for (int i = 0, j = 0; i < outputBufferPos; i++, j++) {
-				if (j == lookaheadBits) {
-					searchIndex.clear();
-					j = 0;
+			for(; scanPos <= windowPos - lookaheadSize; scanPos++) {
+				int bestMatchLen = 0;
+				int bestMatchOff = 0;
+				int maxMatchLen = Math.min(lookaheadSize, windowPos - scanPos);
+				int end = windowSize + scanPos;
+				int start = end - windowSize;
+
+
+				for(int i = end - 1; end >= start; i--) {
+					if(window[i + bestMatchLen] == window[end + bestMatchLen]
+							&& window[i] == window[end]) {
+						int l = 1;
+						for(; l < maxMatchLen; l++) {
+							if(window[i + l] != window[end + l]) {
+								break;
+							}
+						}
+						if(l > bestMatchLen) {
+							bestMatchLen = l;
+							bestMatchOff = i;
+							if(bestMatchLen == maxMatchLen) {
+								break;
+							}
+						}
+					}
 				}
 
-				byte c = outputBuffer[i];
-				Integer lastPos = searchIndex.put(c, i);
-				if (lastPos == null) {
-					if (matchStartIndex != -1 && matchLength > breakEven) {
-						writeBackref(matchStartIndex, matchLength);
-					} else {
-						writeLiteral(c);
-					}
+				if(bestMatchLen > breakEven) {
+					writeBackref(bestMatchOff, bestMatchLen);
 				} else {
-					if (matchStartIndex == -1) {
-						matchStartIndex = lastPos;
-					}
-					matchLength++;
+					writeLiteral(window[windowSize + scanPos]);
 				}
 			}
+
+
 		}
-		outputBufferPos = 0;
+		windowPos = 0;
 		return State.NOT_FULL;
 	}
 
@@ -151,8 +160,8 @@ public class HsOutputStream extends FilterOutputStream {
 
 	private void writeBackref(int matchStartIndex, int matchLength) throws IOException {
 		writeBits(1, 0);
-		writeBits(windowSize, matchStartIndex-1);
-		writeBits(lookaheadSize, matchLength-1);
+		writeBits(windowBits, matchStartIndex-1);
+		writeBits(lookaheadBits, matchLength-1);
 	}
 
 	private void writeBits(int numBits, int value) throws IOException {
