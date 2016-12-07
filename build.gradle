@@ -13,7 +13,7 @@ repositories {
 }
 
 group = 'com.github.markrileybot.heatshrink'
-version = '0.0.4'
+version = '0.0.5-SNAPSHOT'
 
 dependencies {
 	testCompile 'junit:junit:4.12'
