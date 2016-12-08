@@ -3,14 +3,11 @@ package heatshrink;
 import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  *
  */
 public class HsInputStream extends FilterInputStream {
-
-	private static final double LN2 = Math.log(2);
 
 	/**
 	 * State machine states.  Don't really need this but it's nice
@@ -19,8 +16,7 @@ public class HsInputStream extends FilterInputStream {
 	enum State {
 		TAG_BIT,                /* tag bit */
 		YIELD_LITERAL,          /* ready to yield literal byte */
-		BACKREF_INDEX,          /* ready to yield backref index */
-		BACKREF_COUNT,          /* ready to yield backref count */
+		BACKREF_BOUNDS,         /* ready to yield backref bounds */
 		YIELD_BACKREF,          /* ready to yield back-reference */
 		BUFFER_EMPTY,           /* Not enough data to continue */
 	}
@@ -87,17 +83,17 @@ public class HsInputStream extends FilterInputStream {
 	 *           this instance is to be created without an underlying stream.
 	 */
 	public HsInputStream(java.io.InputStream in) {
-		this(in, 2 << 11, 11, 4);
+		this(in, 11, 4);
 	}
 
 
 	public HsInputStream(java.io.InputStream in, int windowSize, int lookaheadSize) {
-		this(in, 2 << windowSize, windowSize, lookaheadSize);
+		this(in, bestInputBufferSize(0, windowSize), windowSize, lookaheadSize);
 	}
 
 	public HsInputStream(java.io.InputStream in, int bufferSize, int windowSize, int lookaheadSize) {
 		super(in);
-		this.inputBuffer = new byte[Math.max(2 << windowSize, bufferSize)];
+		this.inputBuffer = new byte[bestInputBufferSize(bufferSize, windowSize)];
 		this.window = new byte[1 << windowSize];
 		this.windowSize = windowSize;
 		this.lookaheadSize = lookaheadSize;
@@ -185,16 +181,15 @@ public class HsInputStream extends FilterInputStream {
 				case YIELD_LITERAL:
 					state = readLiteral(rr);
 					break;
-				case BACKREF_INDEX:
-					state = readBackrefIndex();
-					break;
-				case BACKREF_COUNT:
-					state = readBackrefCount();
+				case BACKREF_BOUNDS:
+					state = readBackrefBounds();
 					break;
 				case YIELD_BACKREF:
 					state = readBackref(rr);
 					break;
 				case BUFFER_EMPTY:
+					break;
+				default:
 					break;
 			}
 
@@ -216,18 +211,15 @@ public class HsInputStream extends FilterInputStream {
 			return State.YIELD_LITERAL;
 		}
 		outputCount = outputIndex = 0;
-		return State.BACKREF_INDEX;
+		return State.BACKREF_BOUNDS;
 	}
 
-	private State readBackrefIndex() throws IOException {
+	private State readBackrefBounds() throws IOException {
 		int bits = getBits(windowSize);
 		if(bits == -1) return State.BUFFER_EMPTY;
 		outputIndex = bits + 1;
-		return State.BACKREF_COUNT;
-	}
 
-	private State readBackrefCount() throws IOException {
-		int bits = getBits(lookaheadSize);
+		bits = getBits(lookaheadSize);
 		if(bits == -1) return State.BUFFER_EMPTY;
 		outputCount = bits + 1;
 		return State.YIELD_BACKREF;
@@ -264,13 +256,14 @@ public class HsInputStream extends FilterInputStream {
 	}
 
 	/**
+	 * Skips bytes (decompressing first).  This means that <code>n</code>
+	 * and the return value will be relative to the uncompressed bytes.
+	 *
 	 * Skips over and discards <code>n</code> bytes of data from the
 	 * input stream. The <code>skip</code> method may, for a variety of
 	 * reasons, end up skipping over some smaller number of bytes,
 	 * possibly <code>0</code>. The actual number of bytes skipped is
 	 * returned.
-	 * <p>
-	 * This method simply performs <code>in.skip(n)</code>.
 	 *
 	 * @param      n   the number of bytes to be skipped.
 	 * @return     the actual number of bytes skipped.
@@ -283,6 +276,25 @@ public class HsInputStream extends FilterInputStream {
 			if(read(tmp) <= 0) break;
 		}
 		return r;
+	}
+
+	/**
+	 * Like skip but skips compressed bytes
+	 *
+	 * @param n the number of compressed bytes to skip
+	 * @return The number of bytes skipped
+	 * @throws IOException If something breaks
+	 * @see #skip(long)
+	 */
+	public long skipRaw(long n) throws IOException {
+		long toSkip = Math.min(n, inputBufferLen - inputBufferPos);
+		currentBytePos = 0;
+		inputBufferPos += toSkip;
+		n -= toSkip;
+		if(n > 0) {
+			toSkip += in.skip(n);
+		}
+		return toSkip;
 	}
 
 	/**
@@ -384,15 +396,17 @@ public class HsInputStream extends FilterInputStream {
 		state = State.TAG_BIT;
 		outputCount = outputIndex = 0;
 		inputBufferPos = inputBufferLen = 0;
-		currentBytePos = 0;
 		inputExhausted = false;
+		currentBytePos = 0;
+		windowPos = 0;
 	}
 
-	private boolean ensureAvailable(int bitsRequired) throws IOException {
+	// exposed for testing
+	boolean ensureAvailable(int bitsRequired) throws IOException {
 		int bytesRemaining = inputBufferLen - inputBufferPos;
 		int bitsAvailable = bytesRemaining * 8;
 
-		bitsRequired -= (currentBytePos > 0 ? 8 - ((Math.log(currentBytePos) / LN2) + 1) : 0);
+		bitsRequired -= currentBytePos;
 		if(bitsRequired > bitsAvailable) {
 			if(bytesRemaining > 0) {
 				// lame buffer shift won't happen often
@@ -417,24 +431,28 @@ public class HsInputStream extends FilterInputStream {
 		if(!ensureAvailable(numBits)) {
 			return -1;
 		}
-		for(; numBits > 0; numBits--, currentBytePos >>= 1) {
+		for(; numBits > 0; numBits--, currentBytePos--) {
 			if(currentBytePos == 0) {
 				currentByte = inputBuffer[inputBufferPos++];
-				currentBytePos = 0x80;
+				currentBytePos = 8;
 			}
 
 			ret <<= 1;
-			if (currentBytePos == 0x80 && numBits >= 8) {
+			if (currentBytePos == 8 && numBits >= 8) {
 				ret <<= 7;
 				ret |= currentByte & 0xff;
 				numBits -= 7;
-				currentBytePos = 0;
-			} else if ((currentByte & currentBytePos) != 0) {
+				currentBytePos = 1;
+			} else if ((currentByte & (1 << (currentBytePos - 1))) != 0) {
 				ret |= 0x01;
 			}
 		}
 
 		return ret;
+	}
+
+	private static int bestInputBufferSize(int bufferSize, int windowSize) {
+		return Math.max(1 << windowSize, bufferSize);
 	}
 
 	private static final class ReadResult {
