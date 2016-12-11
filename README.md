@@ -15,11 +15,31 @@ build.gradle:
 ```groovy
 
 repositories {
-	jcenter()
+	maven { url 'https://dl.bintray.com/mrileybot/markrileybot/' }
 }
     
 dependencies {
 	compile 'com.github.markrileybot.heatshrink:heatshrink-java:0.0.3'
+}
+
+```
+
+## Usage
+
+```java
+
+int windowSize = 9;
+int lookaheadSize = 8;
+ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+try(HsOutputStream out = new HsOutputStream(baos, windowSize, lookaheadSize)) {
+	out.write("ABCABCABCABCABCABC".getBytes());
+}
+
+try(HsInputStream hsi = new HsInputStream(new ByteArrayInutStream(baos.toByteArray()), windowSize, lookaheadSize)) {
+	byte[] res = new byte[512];
+	int len = hsi.read(res);
+	System.out.println(new String(res, 0, len));
 }
 
 ```
