@@ -74,7 +74,7 @@ public class HsInputStream extends FilterInputStream {
 	 * read() tmps
 	 */
 	private final byte[] tmp = new byte[1];
-	private final ReadResult rr = new ReadResult();
+	private final Result rr = new Result();
 
 	/**
 	 * Creates a <code>FilterInputStream</code>
@@ -229,7 +229,7 @@ public class HsInputStream extends FilterInputStream {
 		return State.YIELD_BACKREF;
 	}
 
-	private State readBackref(ReadResult rr) {
+	private State readBackref(Result rr) {
 		int count = Math.min(rr.end - rr.off, outputCount);
 		if(count > 0) {
 			int mask = (1 << windowSize) - 1;
@@ -246,7 +246,7 @@ public class HsInputStream extends FilterInputStream {
 		return State.YIELD_BACKREF;
 	}
 
-	private State readLiteral(ReadResult rr) throws IOException {
+	private State readLiteral(Result rr) throws IOException {
 		if(rr.off < rr.end) {
 			int bits = getBits(8);
 			if(bits == -1) return State.BUFFER_EMPTY;
@@ -457,20 +457,5 @@ public class HsInputStream extends FilterInputStream {
 
 	private static int bestInputBufferSize(int bufferSize, int windowSize) {
 		return Math.max(1 << windowSize, bufferSize);
-	}
-
-	private static final class ReadResult {
-		int off;
-		int len;
-		int end;
-		byte[] b;
-
-		private ReadResult set(byte[] b, int off, int len) {
-			this.b = b;
-			this.off = off;
-			this.len = len;
-			this.end = off + len;
-			return this;
-		}
 	}
 }

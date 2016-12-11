@@ -3,8 +3,6 @@ package heatshrink;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * OutputStream used to heatshrink encode data.
@@ -14,35 +12,43 @@ import java.util.Map;
  */
 public class HsOutputStream extends FilterOutputStream {
 
+	/**
+	 * Window size (in bytes)
+	 */
 	private final int windowSize;
+	/**
+	 * Backref size (in bits)
+	 */
 	private final int lookaheadSize;
-	private int currentByte;
-	private int currentBytePos = 0x80;
-
-	private enum State {
-		NOT_FULL,              /* input buffer not full enough */
-		FILLED,                /* buffer is full */
-		SEARCH,                /* searching for patterns */
-		YIELD_TAG_BIT,         /* yield tag bit */
-		YIELD_LITERAL,         /* emit literal byte */
-		YIELD_BR_INDEX,        /* yielding backref index */
-		YIELD_BR_LENGTH,       /* yielding backref length */
-		SAVE_BACKLOG,          /* copying buffer to backlog */
-		FLUSH_BITS,            /* flush bit buffer */
-		DONE,                  /* done */
-	}
-
-	private final byte[] window;
-
-	private int windowPos;
-
+	/**
+	 * Window size (in bits available)
+	 */
 	private final int windowBits;
+	/**
+	 * Backref size (in bits available)
+	 */
 	private final int lookaheadBits;
 
-	private byte[] tmp = new byte[1];
-	private final WriteResult wr = new WriteResult();
+	/**
+	 * Current byte I'm writting to
+	 */
+	private int currentByte;
+	/**
+	 * Current position I'm writing to
+	 */
+	private int currentBytePos = 0x80;
 
-	private State state = State.NOT_FULL;
+	/**
+	 * window and position
+	 */
+	private final byte[] window;
+	private int windowPos;
+
+	/**
+	 * write() tmps
+	 */
+	private final byte[] tmp = new byte[1];
+	private final Result wr = new Result();
 
 	/**
 	 * Creates an output stream filter built on top of the specified
@@ -64,12 +70,13 @@ public class HsOutputStream extends FilterOutputStream {
 
 	@Override
 	public void write(int b) throws IOException {
-		super.write(b);
+		tmp[0] = (byte) b;
+		super.write(tmp);
 	}
 
 	@Override
 	public void write(byte[] b) throws IOException {
-		super.write(b);
+		super.write(b, 0, b.length);
 	}
 
 	@Override
@@ -86,71 +93,91 @@ public class HsOutputStream extends FilterOutputStream {
 		wr.set(b, off, len);
 		while(wr.off < wr.end) {
 			if(fillOutputBuffer(wr)) {
-				flushOutputBuffer();
+				flushOutputBuffer(false);
 			}
 		}
 	}
 
 	@Override
 	public void flush() throws IOException {
-		flushOutputBuffer();
+		flushOutputBuffer(true);
 		super.flush();
 	}
 
-	private boolean fillOutputBuffer(WriteResult wr) {
+	private boolean fillOutputBuffer(Result wr) {
 		int rem = windowSize - windowPos;
 		if(rem > 0) {
 			rem = Math.min(rem, wr.len);
 			System.arraycopy(wr.b, wr.off, window, windowPos + windowSize, rem);
 			wr.off += rem;
+			wr.len -= rem;
 			windowPos += rem;
 		}
 		return windowPos == windowSize;
 	}
 
-	private State flushOutputBuffer() throws IOException {
+	private void flushOutputBuffer(boolean finish) throws IOException {
 		if(windowPos > 0) {
-			int breakEven = (1 + windowBits + lookaheadBits) / 8;
 			int scanPos = 0;
+			int breakEven = (1 + windowBits + lookaheadBits) / 8;
 
-			for(; scanPos <= windowPos - lookaheadSize; scanPos++) {
-				int bestMatchLen = 0;
-				int bestMatchOff = 0;
-				int maxMatchLen = Math.min(lookaheadSize, windowPos - scanPos);
-				int end = windowSize + scanPos;
-				int start = end - windowSize;
-
-
-				for(int i = end - 1; end >= start; i--) {
-					if(window[i + bestMatchLen] == window[end + bestMatchLen]
-							&& window[i] == window[end]) {
-						int l = 1;
-						for(; l < maxMatchLen; l++) {
-							if(window[i + l] != window[end + l]) {
-								break;
-							}
-						}
-						if(l > bestMatchLen) {
-							bestMatchLen = l;
-							bestMatchOff = i;
-							if(bestMatchLen == maxMatchLen) {
-								break;
-							}
-						}
-					}
-				}
-
-				if(bestMatchLen > breakEven) {
-					writeBackref(bestMatchOff, bestMatchLen);
-				} else {
-					writeLiteral(window[windowSize + scanPos]);
-				}
+			for(; scanPos <= windowPos - (finish ? 1 : lookaheadSize); scanPos++) {
+				scanPos = writeNext(scanPos, breakEven);
 			}
 
-
+			shiftWindow(finish, scanPos);
 		}
-		windowPos = 0;
-		return State.NOT_FULL;
+		if(finish) {
+			if(currentBytePos != 0x80) {
+				flushCurrentByte();
+			}
+		}
+	}
+
+	private void shiftWindow(boolean finish, int scanPos) {
+		// Shift window down to prepare for more datas
+		if(!finish && scanPos < windowPos){
+			int rem = windowSize - scanPos;
+			System.arraycopy(window, windowPos - rem, window, 0, windowSize + rem);
+			windowPos = rem;
+		} else {
+			windowPos = 0;
+		}
+	}
+
+	private int writeNext(int scanPos, int breakEven) throws IOException {
+		int bestMatchLen = 0;
+		int bestMatchOff = 0;
+		int maxMatchLen = Math.min(lookaheadSize, windowPos - scanPos);
+		int end = windowSize + scanPos;
+		int start = end - windowSize;
+
+		for(int i = end - 1; i >= start; i--) {
+			if(window[i + bestMatchLen] == window[end + bestMatchLen]
+					&& window[i] == window[end]) {
+				int l = 1;
+				for(; l < maxMatchLen; l++) {
+					if(window[i + l] != window[end + l]) {
+						break;
+					}
+				}
+				if(l > bestMatchLen) {
+					bestMatchLen = l;
+					bestMatchOff = i;
+					if(bestMatchLen == maxMatchLen) {
+						break;
+					}
+				}
+			}
+		}
+
+		if(bestMatchLen > breakEven) {
+			writeBackref(end - bestMatchOff, bestMatchLen);
+			scanPos += bestMatchLen - 1;
+		} else {
+			writeLiteral(window[windowSize + scanPos]);
+		}
+		return scanPos;
 	}
 
 	private void writeLiteral(byte c) throws IOException {
@@ -165,39 +192,30 @@ public class HsOutputStream extends FilterOutputStream {
 	}
 
 	private void writeBits(int numBits, int value) throws IOException {
-		for(; numBits > 0; numBits--, currentBytePos >>= 1, value >>= 1) {
-			if(numBits >= 8 && currentBytePos == 0x80) {
-				write(value & 0xff);
-				value >>= 7;
-				numBits -= 7;
-				currentBytePos = 0x100;
-			} else {
-				currentByte <<= 1;
-				if((value & 1) != 0) {
-					currentByte |= 1;
+		if(numBits == 8 && currentBytePos == 0x80) {
+			currentByte = value & 0xff;
+			flushCurrentByte();
+		} else {
+			for (int i = numBits - 1; i >= 0; i--) {
+				if ((value & (1 << i)) != 0) {
+					currentByte |= currentBytePos;
 				}
-
-				if (currentBytePos == 0) {
-					write(currentByte);
-					currentBytePos = 0x80;
-					currentByte = 0;
+				if ((currentBytePos >>= 1) == 0) {
+					flushCurrentByte();
 				}
 			}
 		}
 	}
 
-	private static final class WriteResult {
-		int off;
-		int len;
-		int end;
-		byte[] b;
+	private void flushCurrentByte() throws IOException {
+		out.write(currentByte);
+		currentBytePos = 0x80;
+		currentByte = 0;
+	}
 
-		private WriteResult set(byte[] b, int off, int len) {
-			this.b = b;
-			this.off = off;
-			this.len = len;
-			this.end = off + len;
-			return this;
-		}
+	public void clear() {
+		currentBytePos = 0x80;
+		currentByte = 0;
+		windowPos = 0;
 	}
 }
