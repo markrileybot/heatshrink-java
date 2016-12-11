@@ -21,14 +21,7 @@ public class HsInputStreamFileTest {
 
 	@Parameters(name="{0}")
 	public static Iterable<Object[]> generateParameters() {
-		List<Object[]> result = new ArrayList<>();
-		for(TestFile testFile : TestData.getTestFiles()) {
-			result.add(new Object[]{testFile});
-		}
-		if(result.isEmpty()) {
-			throw new RuntimeException("No test files found!");
-		}
-		return result;
+		return TestData.getTestParameters();
 	}
 
 	private final TestFile testFile;
