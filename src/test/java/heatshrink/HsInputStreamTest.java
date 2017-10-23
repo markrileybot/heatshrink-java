@@ -40,6 +40,10 @@ public class HsInputStreamTest {
 		try(HsInputStream hsi = new HsInputStream(new ByteArrayInputStream(new byte[] {1,2,3}))) {
 			Assert.assertEquals(3, hsi.available());
 		}
+		try(HsInputStream hsi = new HsInputStream(new ByteArrayInputStream(new byte[] {1,2,3}))) {
+			hsi.ensureAvailable(16);
+			Assert.assertEquals(3, hsi.available());
+		}
 	}
 
 	@Test

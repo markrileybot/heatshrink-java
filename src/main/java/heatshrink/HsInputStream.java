@@ -315,7 +315,7 @@ public class HsInputStream extends FilterInputStream {
 	 * @exception  IOException  if an I/O error occurs.
 	 */
 	public int available() throws IOException {
-		return in.available();
+		return inputBufferLen - inputBufferPos + in.available();
 	}
 
 	/**
