@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.zip.GZIPInputStream;
 
 public class HsInputOutputStreamNumberArraysTest {
 
@@ -68,7 +69,8 @@ public class HsInputOutputStreamNumberArraysTest {
 		List<T> written = new ArrayList<>();
 		List<T> read = new ArrayList<>();
 
-		try (BufferedReader r = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/testdata/arrays.csv")))) {
+		try (BufferedReader r = new BufferedReader(new InputStreamReader(
+				new GZIPInputStream(getClass().getResourceAsStream("/testdata/arrays.csv.gz"))))) {
 			String l;
 			ByteArrayOutputStream output = new ByteArrayOutputStream();
 
