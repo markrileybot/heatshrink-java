@@ -71,12 +71,12 @@ public class HsOutputStream extends FilterOutputStream {
 	@Override
 	public void write(int b) throws IOException {
 		tmp[0] = (byte) b;
-		super.write(tmp);
+		write(tmp);
 	}
 
 	@Override
 	public void write(byte[] b) throws IOException {
-		super.write(b, 0, b.length);
+		write(b, 0, b.length);
 	}
 
 	@Override
@@ -91,8 +91,8 @@ public class HsOutputStream extends FilterOutputStream {
 		}
 
 		wr.set(b, off, len);
-		while(wr.off < wr.end) {
-			if(fillOutputBuffer(wr)) {
+		while (wr.off < wr.end) {
+			if (fillOutputBuffer(wr)) {
 				flushOutputBuffer(false);
 			}
 		}
@@ -120,7 +120,6 @@ public class HsOutputStream extends FilterOutputStream {
 		if(windowPos > 0) {
 			int scanPos = 0;
 			int breakEven = (1 + windowBits + lookaheadBits) / 8;
-
 			for(; scanPos <= windowPos - (finish ? 1 : lookaheadSize); scanPos++) {
 				scanPos = writeNext(scanPos, breakEven);
 			}
@@ -136,7 +135,7 @@ public class HsOutputStream extends FilterOutputStream {
 
 	private void shiftWindow(boolean finish, int scanPos) {
 		// Shift window down to prepare for more datas
-		if(!finish && scanPos < windowPos){
+		if (!finish && scanPos <= windowPos) {
 			int rem = windowSize - scanPos;
 			System.arraycopy(window, windowPos - rem, window, 0, windowSize + rem);
 			windowPos = rem;
@@ -155,9 +154,10 @@ public class HsOutputStream extends FilterOutputStream {
 		for(int i = end - 1; i >= start; i--) {
 			if(window[i + bestMatchLen] == window[end + bestMatchLen]
 					&& window[i] == window[end]) {
+
 				int l = 1;
 				for(; l < maxMatchLen; l++) {
-					if(window[i + l] != window[end + l]) {
+					if (window[i + l] != window[end + l]) {
 						break;
 					}
 				}
@@ -170,7 +170,6 @@ public class HsOutputStream extends FilterOutputStream {
 				}
 			}
 		}
-
 		if(bestMatchLen > breakEven) {
 			writeBackref(end - bestMatchOff, bestMatchLen);
 			scanPos += bestMatchLen - 1;
