@@ -19,12 +19,14 @@ repositories {
 }
     
 dependencies {
-	compile 'com.github.markrileybot.heatshrink:heatshrink-java:0.2.0'
+	compile 'com.github.markrileybot.heatshrink:heatshrink-java:0.3.0'
 }
 
 ```
 
 ## Usage
+
+### Java library
 
 ```java
 
@@ -41,6 +43,14 @@ try(HsInputStream hsi = new HsInputStream(new ByteArrayInutStream(baos.toByteArr
 	int len = hsi.read(res);
 	System.out.println(new String(res, 0, len));
 }
+
+```
+
+### CLI
+
+```bash
+
+$ java -jar heatshrink-java-exe.jar [-h] [-e|-d] [-v] [-w SIZE] [-l BITS] [IN_FILE] [OUT_FILE]
 
 ```
 
