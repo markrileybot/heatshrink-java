@@ -231,7 +231,7 @@ public class HsInputStream extends FilterInputStream {
 
 	private State readBackref(Result rr) {
 		int count = Math.min(rr.end - rr.off, outputCount);
-		if(count > 0) {
+		if (count > 0) {
 			int mask = (1 << windowSize) - 1;
 			for (int i = 0; i < count; i++) {
 				byte c = window[(windowPos - outputIndex) & mask];
@@ -247,9 +247,9 @@ public class HsInputStream extends FilterInputStream {
 	}
 
 	private State readLiteral(Result rr) throws IOException {
-		if(rr.off < rr.end) {
+		if (rr.off < rr.end) {
 			int bits = getBits(8);
-			if(bits == -1) return State.BUFFER_EMPTY;
+			if (bits == -1) return State.BUFFER_EMPTY;
 			int mask = (1 << windowSize)  - 1;
 			byte c = (byte) (bits & 0xff);
 			window[windowPos++ & mask] = c;
@@ -411,8 +411,8 @@ public class HsInputStream extends FilterInputStream {
 		int bitsAvailable = bytesRemaining * 8;
 
 		bitsRequired -= currentBytePos;
-		if(bitsRequired > bitsAvailable) {
-			if(bytesRemaining > 0) {
+		if (bitsRequired > bitsAvailable) {
+			if (bytesRemaining > 0) {
 				// lame buffer shift won't happen often
 				System.arraycopy(inputBuffer, inputBufferPos, inputBuffer, 0, bytesRemaining);
 			}
@@ -430,22 +430,23 @@ public class HsInputStream extends FilterInputStream {
 		return bitsAvailable >= bitsRequired;
 	}
 
-	private int getBits(int numBits) throws IOException {
+	// exposed for testing
+	int getBits(int numBits) throws IOException {
 		int ret = 0;
-		if(!ensureAvailable(numBits)) {
+		if (!ensureAvailable(numBits)) {
 			return -1;
 		}
-		for(; numBits > 0; numBits--, currentBytePos--) {
-			if(currentBytePos == 0) {
+		for (; numBits > 0; numBits--, currentBytePos--) {
+			if (currentBytePos == 0) {
 				currentByte = inputBuffer[inputBufferPos++];
 				currentBytePos = 8;
 			}
 
 			ret <<= 1;
 			if (currentBytePos == 8 && numBits >= 8) {
-				ret <<= 7;
+				ret <<= 7; // look up!  we've already shifted one
 				ret |= currentByte & 0xff;
-				numBits -= 7;
+				numBits -= 7; // the final bit it subtracted after the loop
 				currentBytePos = 1;
 			} else if ((currentByte & (1 << (currentBytePos - 1))) != 0) {
 				ret |= 0x01;

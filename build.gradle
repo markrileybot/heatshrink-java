@@ -13,7 +13,7 @@ repositories {
 }
 
 group = 'com.github.markrileybot.heatshrink'
-version = '0.2.0'
+version = '0.3.0-SNAPSHOT'
 
 dependencies {
 	testCompile 'junit:junit:4.12'
@@ -28,12 +28,20 @@ jacocoTestReport {
 	}
 }
 
+
 task sourceJar(type: Jar) {
 	from sourceSets.main.allJava
 }
 
 task javadocJar(type: Jar, dependsOn: 'javadoc') {
 	from javadoc.destinationDir
+}
+
+task exeJar(type: Jar, dependsOn: 'classes') {
+	from sourceSets.main.output
+	manifest {
+		attributes 'Main-Class': 'heatshrink.Main'
+	}
 }
 
 publishing {
@@ -47,6 +55,10 @@ publishing {
 
 			artifact javadocJar {
 				classifier 'javadoc'
+			}
+
+			artifact exeJar {
+				classifier 'exe'
 			}
 		}
 	}

@@ -44,6 +44,13 @@ public class HsInputStreamTest {
 			hsi.ensureAvailable(16);
 			Assert.assertEquals(3, hsi.available());
 		}
+		try(HsInputStream hsi = new HsInputStream(new ByteArrayInputStream(new byte[] {1,2,3,1,2,3}), 2, 1)) {
+			Assert.assertEquals(528408, hsi.getBits(27));
+			Assert.assertTrue(hsi.ensureAvailable(16));
+			Assert.assertTrue(hsi.ensureAvailable(16));
+			Assert.assertEquals(33025, hsi.getBits(20));
+			Assert.assertFalse(hsi.ensureAvailable(2));
+		}
 	}
 
 	@Test
