@@ -19,7 +19,7 @@ repositories {
 }
     
 dependencies {
-	compile 'com.github.markrileybot.heatshrink:heatshrink-java:0.3.0'
+	compile 'com.github.markrileybot.heatshrink:heatshrink-java:0.4.0'
 }
 
 ```
