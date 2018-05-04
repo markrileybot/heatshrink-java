@@ -3,6 +3,7 @@ package heatshrink;
 import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * InputStream used to decode heatshrink'd data.
@@ -398,11 +399,16 @@ public class HsInputStream extends FilterInputStream {
 	 */
 	public void clear() {
 		state = State.TAG_BIT;
-		outputCount = outputIndex = 0;
-		inputBufferPos = inputBufferLen = 0;
+		outputCount = 0;
+		outputIndex = 0;
+		inputBufferPos = 0;
+		inputBufferLen = 0;
 		inputExhausted = false;
 		currentBytePos = 0;
+		currentByte = 0;
 		windowPos = 0;
+		Arrays.fill(window, (byte)0);
+		Arrays.fill(inputBuffer, (byte)0);
 	}
 
 	// exposed for testing

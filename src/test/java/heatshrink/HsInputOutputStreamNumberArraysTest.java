@@ -9,7 +9,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -73,11 +75,15 @@ public class HsInputOutputStreamNumberArraysTest {
 				new GZIPInputStream(getClass().getResourceAsStream("/testdata/arrays.csv.gz"))))) {
 			String l;
 			ByteArrayOutputStream output = new ByteArrayOutputStream();
+			ChunkyInputStream chunks = new ChunkyInputStream();
+			HsInputStream input = new HsInputStream(chunks, 9, 8);
+			DataInputStream in = new DataInputStream(input);
 
 			while ((l = r.readLine()) != null) {
 				written.clear();
 				read.clear();
 				output.reset();
+				input.clear();
 
 				try (DataOutputStream out = new DataOutputStream(new HsOutputStream(output, 9, 8))) {
 					for (String s : l.split(",")) {
@@ -87,14 +93,41 @@ public class HsInputOutputStreamNumberArraysTest {
 					}
 				}
 
-				try (DataInputStream in = new DataInputStream(new HsInputStream(new ByteArrayInputStream(output.toByteArray()), 9, 8))) {
-					for (int i = 0; i < written.size(); i++) {
-						read.add(reader.apply(in));
-					}
+				chunks.setNext(output.toByteArray());
+				for (int i = 0; i < written.size(); i++) {
+					read.add(reader.apply(in));
 				}
 
 				Assert.assertEquals(written, read);
 			}
+		}
+	}
+
+	private static final class ChunkyInputStream extends InputStream {
+		private ByteBuffer next;
+
+		public void setNext(byte[] b) {
+			this.next = ByteBuffer.wrap(b);
+		}
+
+		@Override
+		public int read(byte[] b) throws IOException {
+			int r = Math.min(next.remaining(), b.length);
+			next.get(b, 0, r);
+			return r;
+		}
+
+		@Override
+		public int read(byte[] b, int off, int len) throws IOException {
+			int r = Math.min(next.remaining(), len);
+			next.get(b, off, r);
+			return r;
+		}
+
+		@Override
+		public int read() throws IOException {
+			if (!next.hasRemaining()) return -1;
+			return next.get() & 0xff;
 		}
 	}
 }
