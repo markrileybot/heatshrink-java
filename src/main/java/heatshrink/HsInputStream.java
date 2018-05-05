@@ -192,7 +192,6 @@ public class HsInputStream extends FilterInputStream {
 					state = readBackref(rr);
 					break;
 				case BUFFER_EMPTY:
-					break;
 				default:
 					break;
 			}

@@ -51,6 +51,24 @@ public class HsInputStreamTest {
 			Assert.assertEquals(33025, hsi.getBits(20));
 			Assert.assertFalse(hsi.ensureAvailable(2));
 		}
+		try(HsInputStream hsi = new HsInputStream(new ByteArrayInputStream(new byte[] {1,2,3,1,2,3}), 2, 1)) {
+			Assert.assertEquals(258, hsi.getBits(16));
+			Assert.assertEquals(1574928, hsi.getBits(27));
+		}
+	}
+
+	@Test
+	public void testEmptyRequest() throws IOException {
+		try(HsInputStream hsi = new HsInputStream(new ByteArrayInputStream(new byte[] {1,2,3}))) {
+			Assert.assertEquals(0, hsi.read(new byte[0]));
+		}
+	}
+
+	@Test
+	public void testEof() throws IOException {
+		try(HsInputStream hsi = new HsInputStream(new ByteArrayInputStream(new byte[0]))) {
+			Assert.assertEquals(-1, hsi.read(new byte[1]));
+		}
 	}
 
 	@Test
