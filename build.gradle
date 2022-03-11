@@ -3,7 +3,6 @@ plugins {
 	id "jacoco"
 	id 'maven-publish'
 	id 'com.github.kt3k.coveralls' version '2.6.3'
-	id "com.jfrog.bintray" version "1.7"
 }
 
 repositories {
@@ -16,9 +15,9 @@ group = 'com.github.markrileybot.heatshrink'
 version = '0.4.0'
 
 dependencies {
-	testCompile 'junit:junit:4.12'
-	testCompile 'commons-io:commons-io:2.5'
-	testCompile files(sourceSets.test.resources.srcDirs)
+	testImplementation 'junit:junit:4.12'
+	testImplementation 'commons-io:commons-io:2.5'
+	testImplementation files(sourceSets.test.resources.srcDirs)
 }
 
 jacocoTestReport {
@@ -64,13 +63,3 @@ publishing {
 	}
 }
 
-bintray {
-	user = 'markrileybot'
-	key = System.getenv('BINTRAY_KEY')
-	publications = ['mavenJava']
-	pkg {
-		repo = 'markrileybot'
-		name = project.name
-		userOrg = 'mrileybot'
-	}
-}
