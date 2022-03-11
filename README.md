@@ -55,9 +55,7 @@ $ java -jar heatshrink-java-exe.jar [-h] [-e|-d] [-v] [-w SIZE] [-l BITS] [IN_FI
 ```
 
 ## Status
-[![Build Status](https://travis-ci.org/markrileybot/heatshrink-java.png)](http://travis-ci.org/markrileybot/heatshrink-java)
-[![Coverage Status](https://coveralls.io/repos/github/markrileybot/heatshrink-java/badge.svg?branch=master)](https://coveralls.io/github/markrileybot/heatshrink-java?branch=master)
-[![Download](https://api.bintray.com/packages/mrileybot/markrileybot/heatshrink-java/images/download.svg) ](https://bintray.com/mrileybot/markrileybot/heatshrink-java/_latestVersion)
+[![Build Status](https://github.com/markrileybot/heatshrink-java/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/markrileybot/heatshrink-java/actions/workflows/gradle-publish.yml)
 
 [heatshrink]: https://github.com/atomicobject/heatshrink
 
