@@ -55,9 +55,25 @@ public class HsOutputStream extends FilterOutputStream {
 	 * underlying output stream.
 	 *
 	 * @param out the underlying output stream to be assigned to
-	 *            the field <tt>this.out</tt> for later use, or
+	 *            the field <code>this.out</code> for later use, or
 	 *            <code>null</code> if this instance is to be
 	 *            created without an underlying stream.
+	 * @param windowSize The window size.  The window size determines
+	 *                   how far back in the input can be searched for
+	 *                   repeated patterns. A window_sz2 of 8 will only
+	 *                   use 256 bytes (2^8), while a window_sz2 of 10
+	 *                   will use 1024 bytes (2^10). The latter uses
+	 *                   more memory, but may also compress more effectively
+	 *                   by detecting more repetition.
+	 * @param lookaheadSize The lookahead size determines the max length for
+	 *                      repeated patterns that are found. If the lookahead_sz2
+	 *                      is 4, a 50-byte run of 'a' characters will be
+	 *                      represented as several repeated 16-byte patterns
+	 *                      (2^4 is 16), whereas a larger lookahead_sz2 may be
+	 *                      able to represent it all at once. The number of bits
+	 *                      used for the lookahead size is fixed, so an overly
+	 *                      large lookahead size can reduce compression by adding
+	 *                      unused size bits to small patterns.
 	 */
 	public HsOutputStream(OutputStream out, int windowSize, int lookaheadSize) {
 		super(out);
