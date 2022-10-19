@@ -3,16 +3,16 @@ plugins {
 	id "jacoco"
 	id 'maven-publish'
 	id 'com.github.kt3k.coveralls' version '2.6.3'
+	id 'org.danilopianini.publish-on-central' version '1.0.2'
 }
 
 repositories {
 	mavenLocal()
 	mavenCentral()
-	jcenter()
 }
 
-group = 'com.github.markrileybot.heatshrink'
-version = '0.4.0'
+group = 'io.github.markrileybot'
+version = '1.0.1'
 
 dependencies {
 	testImplementation 'junit:junit:4.12'
@@ -32,10 +32,6 @@ task sourceJar(type: Jar) {
 	from sourceSets.main.allJava
 }
 
-task javadocJar(type: Jar, dependsOn: 'javadoc') {
-	from javadoc.destinationDir
-}
-
 task exeJar(type: Jar, dependsOn: 'classes') {
 	from sourceSets.main.output
 	manifest {
@@ -43,9 +39,36 @@ task exeJar(type: Jar, dependsOn: 'classes') {
 	}
 }
 
+publishOnCentral {
+	if (project.version.endsWith("-SNAPSHOT")) {
+		mavenCentralSnapshotsRepository()
+	}
+
+	projectDescription.set(file('README.md').text)
+	projectLongName.set(project.name)
+	licenseName.set("Apache License, Version 2.0")
+	licenseUrl.set("http://www.apache.org/licenses/LICENSE-2.0")
+	projectUrl.set("https://github.com/markrileybot/${project.name}")
+	scmConnection.set("git:git@github.com:markrileybot/${project.name}")
+}
+
+signing {
+	useGpgCmd()
+}
+
 publishing {
 	publications {
 		mavenJava(MavenPublication) {
+			pom {
+				developers {
+					developer {
+						name.set("Mark Riley")
+						email.set("mark@markriley.net")
+						url.set("https://github.com/markrileybot/${project.name}")
+					}
+				}
+			}
+
 			from components.java
 
 			artifact sourceJar {
