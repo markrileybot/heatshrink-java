@@ -1,6 +1,6 @@
 # heatshrink-java
 
-Java library used to encode/decode [heatshrink] compressed data.
+Java library used to encode/decode [heatshrink](https://github.com/atomicobject/heatshrink) compressed data.
 
 ## Building
 
@@ -46,6 +46,4 @@ $ java -jar heatshrink-java-exe.jar [-h] [-e|-d] [-v] [-w SIZE] [-l BITS] [IN_FI
 [![Build Status](https://github.com/markrileybot/heatshrink-java/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/markrileybot/heatshrink-java/actions/workflows/gradle-publish.yml)
 [![Coverage Status](https://coveralls.io/repos/github/markrileybot/heatshrink-java/badge.svg?branch=master)](https://coveralls.io/github/markrileybot/heatshrink-java?branch=master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.markrileybot/geokey/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.markrileybot/geokey)
-[heatshrink]: https://github.com/atomicobject/heatshrink
-
 
