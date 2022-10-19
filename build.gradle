@@ -2,7 +2,7 @@ plugins {
 	id "java"
 	id "jacoco"
 	id 'maven-publish'
-	id 'com.github.kt3k.coveralls' version '2.6.3'
+	id 'com.github.kt3k.coveralls' version '2.12.0'
 	id 'org.danilopianini.publish-on-central' version '1.0.2'
 }
 
